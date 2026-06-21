@@ -45,3 +45,19 @@ test("フォールバック候補もジャンルに合わせて変わる", () =>
   assert.match(work, /会議|仕事|メール|大企業|退勤/);
   assert.notEqual(horse, work);
 });
+
+test("追加ジャンルにも具体的な場面候補がある", () => {
+  const cases = [
+    [["AI"], /AI|プロンプト|要約|導入/],
+    [["プロ野球"], /9回|投手|守備|順位|インタビュー/],
+    [["政治"], /国会|物価|選挙|政策|税金/],
+    [["経済"], /為替|株価|物価|賃上げ|金利/],
+    [["会社生活"], /出社|上司|会議|通知|退勤/]
+  ];
+
+  cases.forEach(([genres, pattern], index) => {
+    const context = variety.buildNetaVarietyContext(index + 1, genres, "", []);
+    assert.equal(context.axis, "仕事");
+    assert.match(context.scenes.join(" "), pattern);
+  });
+});
