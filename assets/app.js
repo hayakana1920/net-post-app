@@ -191,6 +191,51 @@ function applyNetaCandidates(generated, fallback, varietyApi) {
   renderNetas();
 }
 
+function basicFallbackNetaCandidates(selectedGenres = [], mood = "", runNo = 1) {
+  const genreText = selectedGenres.join(" ");
+  const topic = mood || selectedGenres[0] || "日常";
+  const work = [
+    `朝から${topic}のことを考えていたら、結局いちばん難しいのは正解より段取りだなと思いました。会社員あるあるですね。`,
+    `会議で${topic}の話になると、きれいな理屈より現場の空気のほうが重い時があります。ここが毎回むずかしいです。`,
+    `${topic}って、外から見るより中にいる人の消耗が大きいですね。大人の顔で流してますが、内心はまあまあ騒がしいです。`,
+    `仕事で${topic}に向き合うと、正論だけでは進まない場面が出ます。人と人の間に立つのがいちばん疲れますね。`
+  ];
+  const ai = [
+    "AIは便利ですが、最後に『これで本当にいいのか』を決めるのは人間なんですよね。楽になるほど判断力が見られます。",
+    "AIに文章を直してもらうと整うんですが、整いすぎると急に自分の体温が消えますね。そこだけは残したいです。"
+  ];
+  const baseball = [
+    "プロ野球って、たった一球で空気が変わるのが怖くて面白いですね。仕事も一言で流れが変わる時があります。",
+    "9回裏を見ていると、最後まで諦めないって言葉が急に現実味を持ちますね。言うのは簡単、やるのは本当に大変です。"
+  ];
+  const politics = [
+    "政治のニュースを見るたび、結局それが生活にどう降りてくるのかを見たいんですよね。大きい話ほど足元が大事です。",
+    "政策の話は立派に聞こえても、家計や職場に届かないと実感が湧きません。そこをもう少し見たいです。"
+  ];
+  const economy = [
+    "経済ニュースって数字だけ見ると遠いですが、物価や給料に降りてくると急に自分ごとになりますね。",
+    "株価や為替の動きを見ると、世の中は動いているのに自分の財布だけ置いていかれる日があります。ここがつらいです。"
+  ];
+  const apex = [
+    "APEXでジャンプマスターになると、急に責任が重くなりますね。降下先を決めるだけで味方に謝る準備をしています。",
+    "初動で武器を拾えない時の焦り、仕事で資料が開かない時と同じ汗が出ます。冷静さってどこで拾えますか。"
+  ];
+  const horse = [
+    "競馬で本命を決めたあとにオッズを見ると、信念がすぐ揺れますね。予想しているのか願っているのか怪しくなります。",
+    "最後の直線だけ声が別人になります。財布には悪いですが、あの数秒のために週末を待っているところがあります。"
+  ];
+  let pool = work;
+  if (/AI|テクノロジー/.test(genreText)) pool = ai.concat(work);
+  if (/プロ野球|野球/.test(genreText)) pool = baseball.concat(work);
+  if (/政治/.test(genreText)) pool = politics.concat(work);
+  if (/経済|投資|お金/.test(genreText)) pool = economy.concat(work);
+  if (/Apex|APEX|ゲーム|パワプロ|ポケポケ/.test(genreText)) pool = apex;
+  if (/競馬/.test(genreText)) pool = horse;
+  const out = [];
+  for (let i = 0; i < 10; i += 1) out.push(pool[(runNo + i) % pool.length]);
+  return out;
+}
+
 function fallbackPostFromNeta(neta) {
   const hook = String(neta || "").split(/[。！？]/)[0].trim() || "正直、こういう日もあります。";
   const body = `${neta}\n\nうまく言えないですが、こういう小さな実感のほうが、あとからじわっと残りますね。`;
@@ -205,7 +250,7 @@ async function generateNeta() {
   const varietyApi = window.NetPostNetaVariety;
   const runNo = varietyApi ? varietyApi.nextRunNumber() : Date.now();
   const variety = varietyApi ? varietyApi.buildNetaVarietyContext(runNo, genres_selected, mood, usedPosts) : null;
-  const fallback = varietyApi ? varietyApi.fallbackNetaCandidates(genres_selected, mood, runNo, 10) : [];
+  const fallback = varietyApi ? varietyApi.fallbackNetaCandidates(genres_selected, mood, runNo, 10) : basicFallbackNetaCandidates(genres_selected, mood, runNo);
 
   btn.disabled = true; btn.textContent = "考え中…";
   note.style.display = "block"; err.style.display = "none";
