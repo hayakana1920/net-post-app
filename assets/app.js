@@ -173,6 +173,30 @@ function renderGenres() {
   });
 }
 
+function parseJsonResponse(text) {
+  const cleaned = String(text || "").replace(/```json|```/g, "").trim();
+  try { return JSON.parse(cleaned); } catch(e) {}
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
+  throw new Error("AIの返答を読み取れませんでした");
+}
+
+function applyNetaCandidates(generated, fallback, varietyApi) {
+  const fresh = varietyApi ? varietyApi.filterFreshNetas(generated, usedPosts, { minCount: 10 }) : generated;
+  netas = varietyApi ? varietyApi.filterFreshNetas([...fresh, ...fallback], usedPosts, { minCount: 10 }) : fresh;
+  if (netas.length === 0) netas = fallback.slice(0, 10);
+  usedPosts = varietyApi ? varietyApi.compactUsedPosts([...usedPosts, ...netas]) : [...usedPosts, ...netas].slice(-200);
+  try { localStorage.setItem("usedPosts", JSON.stringify(usedPosts)); } catch(e) {}
+  renderNetas();
+}
+
+function fallbackPostFromNeta(neta) {
+  const hook = String(neta || "").split(/[。！？]/)[0].trim() || "正直、こういう日もあります。";
+  const body = `${neta}\n\nうまく言えないですが、こういう小さな実感のほうが、あとからじわっと残りますね。`;
+  return { hook, body };
+}
+
 async function generateNeta() {
   const btn = document.getElementById("netaBtn");
   const err = document.getElementById("errorBox");
@@ -181,6 +205,7 @@ async function generateNeta() {
   const varietyApi = window.NetPostNetaVariety;
   const runNo = varietyApi ? varietyApi.nextRunNumber() : Date.now();
   const variety = varietyApi ? varietyApi.buildNetaVarietyContext(runNo, genres_selected, mood, usedPosts) : null;
+  const fallback = varietyApi ? varietyApi.fallbackNetaCandidates(genres_selected, mood, runNo, 10) : [];
 
   btn.disabled = true; btn.textContent = "考え中…";
   note.style.display = "block"; err.style.display = "none";
@@ -226,18 +251,17 @@ ${mood ? "- 今日の気分・出来事: " + mood : ""}
     const data = await res.json();
     if (!data || !data.content) throw new Error("API error: " + JSON.stringify(data).slice(0,100));
     const text = data.content.filter(b => b && b.type==="text").map(b => b.text).join("\n");
-    const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
+    const parsed = parseJsonResponse(text);
     const generated = parsed.netas || [];
-    const fresh = varietyApi ? varietyApi.filterFreshNetas(generated, usedPosts, { minCount: 10 }) : generated;
-    const fallback = varietyApi ? varietyApi.fallbackNetaCandidates(genres_selected, mood, runNo, 10) : [];
-    netas = varietyApi ? varietyApi.filterFreshNetas([...fresh, ...fallback], usedPosts, { minCount: 10 }) : fresh;
-    if (netas.length === 0) netas = fallback.slice(0, 10);
-    usedPosts = varietyApi ? varietyApi.compactUsedPosts([...usedPosts, ...netas]) : [...usedPosts, ...netas].slice(-200);
-    try { localStorage.setItem("usedPosts", JSON.stringify(usedPosts)); } catch(e) {}
-    renderNetas();
+    applyNetaCandidates(generated, fallback, varietyApi);
   } catch(e) {
-    err.textContent = "エラー: " + (e.message || String(e));
-    err.style.display = "block";
+    if (fallback.length > 0) {
+      applyNetaCandidates(fallback, fallback, varietyApi);
+      err.style.display = "none";
+    } else {
+      err.textContent = "エラー: " + (e.message || String(e));
+      err.style.display = "block";
+    }
   } finally {
     btn.disabled = false; btn.textContent = "ネタ候補を出す";
     note.style.display = "none";
@@ -307,11 +331,12 @@ async function generatePost(neta) {
     const data = await res.json();
     if (!data || !data.content) throw new Error("API error");
     const text = data.content.filter(b => b && b.type==="text").map(b => b.text).join("\n");
-    const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
+    const parsed = parseJsonResponse(text);
     currentPost = parsed;
     renderPost(parsed);
   } catch(e) {
-    box.innerHTML = '<div style="padding:16px;color:#A93226;font-size:13px;">生成に失敗しました。もう一度お試しください。</div>';
+    currentPost = fallbackPostFromNeta(neta);
+    renderPost(currentPost);
   } finally {
     regenBtn.disabled = false;
   }
