@@ -178,6 +178,9 @@ async function generateNeta() {
   const err = document.getElementById("errorBox");
   const note = document.getElementById("loadingNote");
   const mood = document.getElementById("mood").value.trim();
+  const varietyApi = window.NetPostNetaVariety;
+  const runNo = varietyApi ? varietyApi.nextRunNumber() : Date.now();
+  const variety = varietyApi ? varietyApi.buildNetaVarietyContext(runNo, genres_selected, mood, usedPosts) : null;
 
   btn.disabled = true; btn.textContent = "考え中…";
   note.style.display = "block"; err.style.display = "none";
@@ -185,21 +188,30 @@ async function generateNeta() {
   document.getElementById("postArea").style.display = "none";
   selectedNeta = null; currentPost = null;
 
-  const usedList = usedPosts.length > 0 ? "\n- 以下は過去に出した内容なので絶対に使わない:\n" + usedPosts.map((p,i)=>`  ${i+1}. ${p}`).join("\n") : "";
+  const usedList = variety ? variety.usedList : (usedPosts.length > 0 ? "\n- 以下は過去に出した内容なので絶対に使わない:\n" + usedPosts.slice(-30).map((p,i)=>`  ${i+1}. ${p}`).join("\n") : "");
   const prompt = `${profilePrompt(genres_selected, mood)}
 
 あなたは上記プロフィールの人物として、Xにそのまま投稿できる自然なつぶやきを10本書いてください。
 
 条件:
-${genres_selected.length > 0 ? "- ジャンル: " + genres_selected.join("・").replace("ポケポケ","ポケモンカードゲームポケット（ポケポケ）") : "- 日常的な内容"}
+- 今回の主軸: ${variety ? variety.axis : pickProfileTheme(genres_selected, mood)}
+- ジャンル: ${variety ? variety.genreLabel : (genres_selected.length > 0 ? genres_selected.join("・").replace("ポケポケ","ポケモンカードゲームポケット（ポケポケ）") : "日常的な内容")}
 ${mood ? "- 今日の気分・出来事: " + mood : ""}
-- 友人にLINEするような気軽なノリで書く。「〜なんですよね」「〜してたら」「〜じゃないですか」みたいな話し言葉
-- 1本目〜7本目は日常の一コマ（「今〜」「さっき〜」「最近〜」で始める）
-- 8本目・9本目・10本目は必ず「？」で終わる問いかけ。これは絶対条件、例外なし
-- 作り込まない。思ったことをそのまま書いた感じ
+- 今回使う具体的な場面候補: ${variety ? variety.scenes.join(" / ") : "日常の一場面"}
+- 今回使う切り口候補: ${variety ? variety.angles.join(" / ") : "小さな本音"}
+- 文の型候補: ${variety ? variety.formats.join(" / ") : "短い体験談"}
+- 書き出し候補: ${variety ? variety.openings.join(" / ") : "自然な話し言葉"}
+- 10本すべてで、場面・書き出し・オチを変える
+- 仕事・APEX・競馬のうち、今回の主軸だけを使う。全部混ぜない
+- 友人にLINEするような気軽なノリで書く。ただし内容には具体的な場面を必ず入れる
+- 「今日ふと思った」「最近」「今日は少しだけ余裕」など同じ書き出しを連発しない
+- ネタ名だけに逃げず、選んだジャンルの具体的な単語を1つ以上入れる
+- 8本目・9本目・10本目は必ず「？」で終わる問いかけ
+- 作り込まない。普通の人がそのまま投稿している感じ
 - 50〜100字程度。短くていい
 - ハッシュタグなし
 - 「です・ます」調の丁寧語で統一する${usedList}
+- 生成シード: ${variety ? variety.seed : runNo}
 
 10本をJSON形式のみで返答。前置き不要:
 {"netas": ["投稿文1", "投稿文2", "投稿文3", "投稿文4", "投稿文5", "投稿文6", "投稿文7", "投稿文8", "投稿文9", "投稿文10"]}`;
@@ -215,8 +227,12 @@ ${mood ? "- 今日の気分・出来事: " + mood : ""}
     if (!data || !data.content) throw new Error("API error: " + JSON.stringify(data).slice(0,100));
     const text = data.content.filter(b => b && b.type==="text").map(b => b.text).join("\n");
     const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
-    netas = parsed.netas || [];
-    usedPosts = [...usedPosts, ...netas];
+    const generated = parsed.netas || [];
+    const fresh = varietyApi ? varietyApi.filterFreshNetas(generated, usedPosts, { minCount: 10 }) : generated;
+    const fallback = varietyApi ? varietyApi.fallbackNetaCandidates(genres_selected, mood, runNo, 10) : [];
+    netas = varietyApi ? varietyApi.filterFreshNetas([...fresh, ...fallback], usedPosts, { minCount: 10 }) : fresh;
+    if (netas.length === 0) netas = fallback.slice(0, 10);
+    usedPosts = varietyApi ? varietyApi.compactUsedPosts([...usedPosts, ...netas]) : [...usedPosts, ...netas].slice(-200);
     try { localStorage.setItem("usedPosts", JSON.stringify(usedPosts)); } catch(e) {}
     renderNetas();
   } catch(e) {
