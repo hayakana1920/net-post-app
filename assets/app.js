@@ -1,6 +1,7 @@
 const GENRES = ["ビジネス・副業","自己啓発","お金・投資","健康・ダイエット","日常・暮らし","子育て・家族","人間関係","食べ物・料理","趣味・旅行","テクノロジー","AI","プロ野球","政治","経済","会社生活","競馬","ゲーム全般","Apex Legends","パワプロ","ポケポケ"];
 const DAYS = ["月曜","火曜","水曜","木曜","金曜","土曜","日曜"];
 const BEST_TIMES = ["07:30","12:00","20:00","07:30","12:00","20:00","09:00"];
+const POST_STYLE_RUN_KEY = "netPostApp.postStyleRun.v1";
 const APP_PROFILE = `平日は大手企業で板挟み。
 夜はAPEXで味方に謝り、
 週末は競馬で財布に謝る馬息子。
@@ -12,8 +13,10 @@ let selectedNeta = null;
 let currentPost = null;
 let schedule = [];
 let usedPosts = [];
+let usedFinalPosts = [];
 try { schedule = JSON.parse(localStorage.getItem("xsched5") || "[]"); } catch(e) {}
 try { usedPosts = JSON.parse(localStorage.getItem("usedPosts") || "[]"); } catch(e) {}
+try { usedFinalPosts = JSON.parse(localStorage.getItem("usedFinalPosts") || "[]"); } catch(e) {}
 
 function pickProfileTheme(selectedGenres = [], seedText = "") {
   const text = `${selectedGenres.join(" ")} ${seedText}`;
@@ -242,6 +245,89 @@ function fallbackPostFromNeta(neta) {
   return { hook, body };
 }
 
+function nextPostStyleRun() {
+  let current = 0;
+  try { current = Number(localStorage.getItem(POST_STYLE_RUN_KEY) || "0") || 0; } catch(e) {}
+  const next = current + 1;
+  try { localStorage.setItem(POST_STYLE_RUN_KEY, String(next)); } catch(e) {}
+  return next;
+}
+
+function buildPostStyle(runNo, neta) {
+  const styles = [
+    {
+      name: "短い本音",
+      length: "60〜100字",
+      shape: "2〜3文。改行は少なめ。説明しすぎず、本音を一つだけ置く",
+      ending: "問いかけで終えない。少し余韻のある断定で終える"
+    },
+    {
+      name: "小さな失敗談",
+      length: "90〜140字",
+      shape: "具体的な失敗を1つ入れてから、軽く自分にツッコむ",
+      ending: "最後は自虐気味の一言で終える"
+    },
+    {
+      name: "鋭めの一言",
+      length: "70〜120字",
+      shape: "前半で違和感、後半で自分の見方を短く言い切る",
+      ending: "問いかけなし。少し強めに言い切る"
+    },
+    {
+      name: "日常あるある",
+      length: "80〜130字",
+      shape: "普通の場面から入り、共感できるあるあるに落とす",
+      ending: "『ありますよね』系でやわらかく終える。ただし毎回は使わない"
+    },
+    {
+      name: "一問だけ",
+      length: "70〜120字",
+      shape: "具体場面を出してから、最後だけ自然な問いかけにする",
+      ending: "問いかけで終えてよい。ただし『あなたはどうですか？』は禁止"
+    },
+    {
+      name: "メモ風",
+      length: "50〜90字",
+      shape: "短いメモのように淡々と書く。説明や前置きを増やさない",
+      ending: "短い余韻で終える"
+    }
+  ];
+  const openings = [
+    "正直、",
+    "これ、",
+    "地味に、",
+    "今日ちょっと思ったのは、",
+    "あまり大きな声では言いませんが、",
+    "昔より、",
+    "こういう時、",
+    "たぶん、"
+  ];
+  const bannedEndings = [
+    "あなたはどうですか？",
+    "みなさんはどうですか？",
+    "どう思いますか？",
+    "大事ですね。",
+    "大切ですね。",
+    "じわっと残りますね。"
+  ];
+  const style = styles[runNo % styles.length];
+  const opening = openings[(runNo + String(neta || "").length) % openings.length];
+  const recent = usedFinalPosts.slice(-8).map((p, i) => `${i + 1}. ${p}`).join("\n");
+  return {
+    ...style,
+    opening,
+    bannedEndings,
+    recentList: recent ? `\n最近作った投稿文。構成・締め方・言い回しをかぶせない:\n${recent}` : ""
+  };
+}
+
+function rememberFinalPost(post) {
+  const full = `${post.hook || ""}\n\n${post.body || ""}`.trim();
+  if (!full) return;
+  usedFinalPosts = [...usedFinalPosts, full].slice(-80);
+  try { localStorage.setItem("usedFinalPosts", JSON.stringify(usedFinalPosts)); } catch(e) {}
+}
+
 async function generateNeta() {
   const btn = document.getElementById("netaBtn");
   const err = document.getElementById("errorBox");
@@ -344,6 +430,8 @@ async function generatePost(neta) {
   const area = document.getElementById("postArea");
   const box = document.getElementById("postBox");
   const regenBtn = document.getElementById("regenBtn");
+  const styleRun = nextPostStyleRun();
+  const style = buildPostStyle(styleRun, neta);
   area.style.display = "block";
   box.innerHTML = '<div style="padding:20px;text-align:center;color:#AAA;font-size:13px;">投稿文を生成中<span class="spinner">…</span></div>';
   regenBtn.disabled = true;
@@ -356,13 +444,19 @@ async function generatePost(neta) {
 ネタ: ${neta}
 
 条件:
+- 今回の文体: ${style.name}
+- 長さ: ${style.length}
+- 構成: ${style.shape}
+- 締め方: ${style.ending}
+- 書き出しの参考: ${style.opening}
 - 作り込んだフックや決まり文句は使わない
-- 素直な体験談・気づきとして書く（「〜だったんですよね」「正直〜だった」「気づいたら〜」など自然な言葉で）
+- 素直な体験談・気づきとして書く。ただし毎回「正直」「気づいたら」「〜だったんですよね」に寄せない
 - 今回使う人物設定の軸だけを自然に反映する。仕事・APEX・競馬を全部入れない
-- 全体で100〜180字程度
 - 句読点をしっかり入れ、スマホで読みやすい改行を入れる
-- 最後に読者への自然な投げかけで締める（「あなたはどうですか？」など）
+- 禁止する締め方: ${style.bannedEndings.join(" / ")}
+- 過去と同じ構成、同じオチ、同じ締め言葉にしない
 - ハッシュタグなし
+${style.recentList}
 
 1行目（書き出し）と本文を分けてJSON形式のみで返答。前置き不要:
 {"hook": "書き出しの一文", "body": "2行目以降の本文（改行は\\nで）"}`;
@@ -378,9 +472,11 @@ async function generatePost(neta) {
     const text = data.content.filter(b => b && b.type==="text").map(b => b.text).join("\n");
     const parsed = parseJsonResponse(text);
     currentPost = parsed;
+    rememberFinalPost(parsed);
     renderPost(parsed);
   } catch(e) {
     currentPost = fallbackPostFromNeta(neta);
+    rememberFinalPost(currentPost);
     renderPost(currentPost);
   } finally {
     regenBtn.disabled = false;
