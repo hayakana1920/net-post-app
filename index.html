@@ -4,101 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>つぶやきネタ帳</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { background: #EFEFEF; font-family: 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', sans-serif; color: #1A1A1A; font-size: 14px; }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 14px 80px; }
-
-  /* タブ */
-  .tabs { display: flex; background: #FFF; border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-  .tab { flex: 1; padding: 10px 6px; font-size: 13px; font-weight: 700; border: none; border-radius: 9px; cursor: pointer; font-family: inherit; background: transparent; color: #888; }
-  .tab.active { background: #3A3A3A; color: #FFF; }
-
-  /* カード */
-  .card { background: #FFF; border-radius: 14px; padding: 16px; margin-bottom: 14px; border: 1px solid #DCDCDC; }
-  .card-label { font-size: 11.5px; font-weight: 800; color: #888; letter-spacing: .06em; margin-bottom: 10px; }
-
-  /* ジャンル */
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { padding: 7px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; border: 1.5px solid #D8D8D8; background: #FFF; color: #333; cursor: pointer; font-family: inherit; }
-  .chip.active { border-color: #3A3A3A; background: #3A3A3A; color: #FFF; }
-
-  /* テキスト入力 */
-  textarea { width: 100%; padding: 11px 13px; font-size: 15px; border: 1.5px solid #D8D8D8; border-radius: 10px; outline: none; font-family: inherit; background: #FFF; color: #1A1A1A; resize: none; line-height: 1.6; }
-
-  /* ボタン */
-  .gen-btn { width: 100%; padding: 14px; font-size: 15px; font-weight: 800; background: #3A3A3A; color: #FFF; border: none; border-radius: 12px; cursor: pointer; font-family: inherit; }
-  .gen-btn:disabled { background: #AAA; }
-
-  /* エラー・ローディング */
-  .error { margin-top: 12px; padding: 11px 13px; background: #FDE8E8; color: #A93226; border-radius: 9px; font-size: 13px; }
-  .loading-note { margin-top: 9px; font-size: 12px; color: #AAA; text-align: center; display: none; }
-  .spinner { display: inline-block; animation: blink 1s infinite; }
-  @keyframes blink { 50% { opacity: .3; } }
-
-  /* ネタ候補 */
-  .neta-list { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
-  .neta-card { background: #FFF; border: 1px solid #DCDCDC; border-radius: 12px; overflow: hidden; cursor: pointer; transition: border-color .15s; }
-  .neta-card:hover { border-color: #3A3A3A; }
-  .neta-card.selected { border: 2px solid #3A3A3A; background: #F7F7F7; }
-  .neta-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
-  .neta-num { font-size: 11px; font-weight: 900; color: #BBB; min-width: 20px; }
-  .neta-text { font-size: 14px; font-weight: 700; line-height: 1.6; flex: 1; }
-  .neta-arrow { font-size: 14px; color: #CCC; }
-  .neta-card.selected .neta-arrow { color: #3A3A3A; }
-
-  /* 投稿文エリア */
-  .post-area { margin-top: 18px; display: none; }
-  .post-area-label { font-size: 11.5px; font-weight: 800; color: #888; letter-spacing: .06em; margin-bottom: 10px; }
-  .post-box { background: #FFF; border: 1px solid #DCDCDC; border-radius: 12px; overflow: hidden; }
-  .post-hook { padding: 13px 14px 4px; font-size: 15px; font-weight: 800; line-height: 1.6; border-left: 3px solid #3A3A3A; margin: 10px 14px 0; padding-left: 10px; border-radius: 2px; }
-  .post-body { padding: 7px 14px 13px; font-size: 13.5px; line-height: 1.85; white-space: pre-wrap; color: #333; }
-  .post-chars { padding: 0 14px 8px; font-size: 11px; color: #BBB; text-align: right; }
-  .post-actions { display: flex; border-top: 1px solid #EBEBEB; }
-  .post-actions button { flex: 1; padding: 12px 4px; font-size: 12.5px; font-weight: 700; border: none; background: #FFF; cursor: pointer; font-family: inherit; color: #333; }
-  .post-actions button + button { border-left: 1px solid #EBEBEB; }
-  .post-actions button.copied { background: #EEF5EE; color: #2E7D32; }
-  .open-x { color: #555 !important; }
-  .regen-btn { width: 100%; padding: 11px; font-size: 13px; font-weight: 800; background: #FFF; border: 1.5px solid #D8D8D8; border-radius: 10px; cursor: pointer; font-family: inherit; margin-top: 10px; color: #555; }
-
-  /* スケジュールタブ */
-  .sched-empty { text-align: center; padding: 40px 20px; color: #AAA; font-size: 13.5px; line-height: 1.9; }
-  .sched-stats { display: flex; gap: 8px; margin-bottom: 14px; }
-  .stat-box { flex: 1; background: #FFF; border-radius: 10px; padding: 11px; text-align: center; border: 1px solid #DCDCDC; }
-  .stat-num { font-size: 24px; font-weight: 900; }
-  .stat-label { font-size: 10.5px; color: #AAA; margin-top: 2px; }
-  .week-grid { display: flex; flex-direction: column; gap: 9px; }
-  .day-row { background: #FFF; border-radius: 12px; overflow: hidden; border: 1px solid #DCDCDC; }
-  .day-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 13px; background: #F7F7F7; border-bottom: 1px solid #EBEBEB; }
-  .day-label { font-size: 12.5px; font-weight: 800; color: #333; }
-  .day-time { font-size: 11.5px; color: #888; font-weight: 700; }
-  .day-post { padding: 11px 13px; }
-  .day-hook { font-size: 14px; font-weight: 800; line-height: 1.5; margin-bottom: 5px; border-left: 3px solid #3A3A3A; padding-left: 9px; }
-  .day-body { font-size: 13px; line-height: 1.75; white-space: pre-wrap; color: #444; }
-  .day-actions { display: flex; border-top: 1px solid #EBEBEB; }
-  .day-actions button { flex: 1; padding: 10px 4px; font-size: 12px; font-weight: 700; border: none; background: #FFF; cursor: pointer; font-family: inherit; color: #333; }
-  .day-actions button + button { border-left: 1px solid #EBEBEB; }
-  .day-actions button.copied { background: #EEF5EE; color: #2E7D32; }
-  .remove-btn { color: #A93226 !important; }
-  .clear-btn { width: 100%; padding: 10px; font-size: 12.5px; font-weight: 700; background: #FFF; border: 1px solid #D8D8D8; border-radius: 10px; cursor: pointer; font-family: inherit; color: #AAA; margin-top: 12px; }
-  .add-sched { color: #2E6DA4 !important; }
-  .reserve-btn { color: #1a7a1a !important; }
-  .reserve-btn.reserved { background: #EEF5EE !important; color: #2E7D32 !important; }
-  .reply-card { background: #FFF; border: 1px solid #DCDCDC; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
-  .reply-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 13px; background: #F7F7F7; border-bottom: 1px solid #EBEBEB; }
-  .reply-lang { font-size: 11px; font-weight: 800; color: #888; letter-spacing: .1em; }
-  .reply-body { padding: 13px 14px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
-  .reply-actions { display: flex; border-top: 1px solid #EBEBEB; }
-  .reply-actions button { flex: 1; padding: 11px 4px; font-size: 12.5px; font-weight: 700; border: none; background: #FFF; cursor: pointer; font-family: inherit; color: #333; }
-  .reply-actions button + button { border-left: 1px solid #EBEBEB; }
-  .reply-actions button.copied { background: #EEF5EE; color: #2E7D32; }
-</style>
+<link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
 <div class="wrap">
   <div class="tabs">
     <button class="tab active" onclick="switchTab('neta')" id="tab-neta">💡 ネタ出し</button>
     <button class="tab" onclick="switchTab('reply')" id="tab-reply">💬 リプライ</button>
+    <button class="tab" onclick="switchTab('analysis')" id="tab-analysis">🔎 文章分析</button>
+    <button class="tab" onclick="switchTab('creator')" id="tab-creator">✍️ 投稿作成</button>
     <button class="tab" onclick="switchTab('schedule')" id="tab-schedule">📅 スケジュール <span id="schedCount"></span></button>
   </div>
 
@@ -145,420 +59,64 @@
   <div id="pane-schedule" style="display:none;">
     <div id="schedContent"></div>
   </div>
+
+  <!-- 文章分析タブ -->
+  <div id="pane-analysis" style="display:none;">
+    <div class="card">
+      <div class="card-label">分析プロフィール名</div>
+      <input id="analysisProfileName" class="text-input" value="職場の本音・共感型" placeholder="例: 職場の本音・共感型">
+    </div>
+    <div class="card">
+      <div class="card-label">参考投稿（1行1投稿 / 5〜100件）</div>
+      <textarea id="analysisText" rows="8" placeholder="参考にしたい投稿を1行に1件ずつ貼り付けてください。元の文章や人物をコピーせず、構造だけを分析します。"></textarea>
+    </div>
+    <div class="card">
+      <div class="card-label">CSVアップロード（text,likes,reposts,replies,views,posted_at）</div>
+      <input id="analysisCsv" type="file" accept=".csv,text/csv">
+    </div>
+    <button class="gen-btn" id="analysisBtn" onclick="runAnalysis()">分析プロフィールを作る</button>
+    <div class="loading-note" id="analysisLoading">分析中<span class="spinner">…</span></div>
+    <div id="analysisError" class="error" style="display:none;"></div>
+    <div class="card safe-note">参考文の反応されやすい構造だけを利用し、元の文章や人物を再現しないよう確認しています。</div>
+    <div id="analysisResult"></div>
+    <div class="card">
+      <div class="card-label">保存済み分析プロフィール</div>
+      <div id="profileList" class="profile-list"></div>
+    </div>
+  </div>
+
+  <!-- 投稿作成タブ -->
+  <div id="pane-creator" style="display:none;">
+    <div class="card">
+      <div class="card-label">分析プロフィール</div>
+      <select id="creatorProfile" class="text-input"></select>
+    </div>
+    <div class="card two-col">
+      <label>今日あった出来事<textarea id="creatorEvent" rows="3"></textarea></label>
+      <label>本当に言いたいこと<textarea id="creatorOpinion" rows="3"></textarea></label>
+      <label>対象読者<input id="creatorAudience" class="text-input" placeholder="例: 会社員、APEX勢、競馬好き"></label>
+      <label>テーマ<input id="creatorTheme" class="text-input" placeholder="例: 仕事、APEX、競馬"></label>
+      <label>含めたい具体的な場面<textarea id="creatorScene" rows="2"></textarea></label>
+      <label>含めたくないこと<textarea id="creatorAvoid" rows="2"></textarea></label>
+      <label>文の強さ<select id="creatorStrength" class="text-input"><option>標準</option><option>やわらかい</option><option>強め</option></select></label>
+      <label>投稿型<select id="creatorPattern" class="text-input"><option>共感</option><option>断定</option><option>問いかけ</option><option>対比</option><option>失敗談</option><option>箇条書き</option><option>ランキング</option></select></label>
+      <label>文字数<select id="creatorLength" class="text-input"><option>100字前後</option><option>50字前後</option><option>140字以内</option><option>280字以内</option></select></label>
+    </div>
+    <button class="gen-btn" id="creatorBtn" onclick="generateOriginalPosts()">10案生成</button>
+    <div class="loading-note" id="creatorLoading">生成中<span class="spinner">…</span></div>
+    <div id="creatorError" class="error" style="display:none;"></div>
+    <div id="generatedPosts" class="generated-list"></div>
+  </div>
 </div>
 
-<script>
-const GENRES = ["ビジネス・副業","自己啓発","お金・投資","健康・ダイエット","日常・暮らし","子育て・家族","人間関係","食べ物・料理","趣味・旅行","テクノロジー","競馬","ゲーム全般","Apex Legends","パワプロ","ポケポケ"];
-const DAYS = ["月曜","火曜","水曜","木曜","金曜","土曜","日曜"];
-const BEST_TIMES = ["07:30","12:00","20:00","07:30","12:00","20:00","09:00"];
-
-let genres_selected = [];
-let netas = [];
-let selectedNeta = null;
-let currentPost = null;
-let schedule = [];
-let usedPosts = [];
-try { schedule = JSON.parse(localStorage.getItem("xsched5") || "[]"); } catch(e) {}
-try { usedPosts = JSON.parse(localStorage.getItem("usedPosts") || "[]"); } catch(e) {}
-
-function switchTab(tab) {
-  ["neta","reply","schedule"].forEach(t => {
-    document.getElementById("pane-"+t).style.display = tab === t ? "" : "none";
-    document.getElementById("tab-"+t).classList.toggle("active", tab === t);
-  });
-  if (tab === "schedule") renderSchedule();
-}
-
-const REPLY_TYPES = [
-  { id:"agree",   label:"共感・同意" },
-  { id:"personal",label:"自分の体験を添える" },
-  { id:"question",label:"質問・掘り下げ" },
-  { id:"english", label:"英語で絡む🇺🇸" },
-];
-let replyType = REPLY_TYPES[1];
-
-function renderReplyTypes() {
-  const el = document.getElementById("replyTypes"); if(!el) return;
-  el.innerHTML = "";
-  REPLY_TYPES.forEach(x => {
-    const b = document.createElement("button");
-    b.className = "chip" + (replyType.id===x.id ? " active" : "");
-    b.textContent = x.label;
-    b.onclick = () => { replyType=x; renderReplyTypes(); };
-    el.appendChild(b);
-  });
-}
-
-async function generateReply() {
-  const btn = document.getElementById("replyBtn");
-  const err = document.getElementById("replyErrorBox");
-  const note = document.getElementById("replyLoadingNote");
-  const buzzPost = document.getElementById("buzzPost").value.trim();
-  if (!buzzPost) { err.textContent = "バズ投稿の本文を貼り付けてください。"; err.style.display="block"; return; }
-
-  btn.disabled=true; btn.textContent="生成中…";
-  note.style.display="block"; err.style.display="none";
-  document.getElementById("replyList").innerHTML="";
-
-  const isEnglish = replyType.id === "english";
-  const typeDesc = {
-    agree: "共感・同意のリプライ。「わかります」だけでなく自分の体験を1行添える",
-    personal: "自分の体験談を添えたリプライ。50代らしい実感のある言葉で",
-    question: "投稿者に興味を持って質問するリプライ。押しつけがましくない自然な疑問",
-    english: "Short English reply from a Japanese person in their 50s. Mention Japan naturally. Keep it friendly and genuine."
-  }[replyType.id];
-
-  const prompt = isEnglish
-    ? `You are a Japanese person in your 50s who wants to reply to this viral post in English.
-
-Viral post: "${buzzPost}"
-
-Write 3 short English replies (1-2 sentences each). Be genuine, friendly, and naturally mention being from Japan when it fits. No hashtags.
-
-Return JSON only:
-{"replies": ["reply1", "reply2", "reply3"]}`
-    : `あなたは50代の日本人です。以下のバズ投稿に自然にリプライしてください。
-
-バズ投稿: 「${buzzPost}」
-
-リプライの方向性: ${typeDesc}
-
-条件:
-- 2〜4行程度の短いリプライ
-- 作り込まず、自然な話し言葉で
-- 相手を否定しない
-- ハッシュタグなし
-- 3パターン生成
-
-JSON形式のみで返答:
-{"replies": ["リプライ1", "リプライ2", "リプライ3"]}`;
-
-  try {
-    const res = await fetch("/.netlify/functions/claude", {
-      method:"POST", headers:{"Content-Type":"application/json",},
-      body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:600, messages:[{role:"user",content:prompt}] })
-    });
-    const data = await res.json();
-    if (!data||!data.content) throw new Error("API error");
-    const text = data.content.filter(b=>b&&b.type==="text").map(b=>b.text).join("\n");
-    const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
-    renderReplies(parsed.replies||[], isEnglish);
-  } catch(e) {
-    err.textContent = "エラー: "+(e.message||String(e));
-    err.style.display="block";
-  } finally {
-    btn.disabled=false; btn.textContent="リプライ案を生成する";
-    note.style.display="none";
-  }
-}
-
-function renderReplies(replies, isEnglish) {
-  const list = document.getElementById("replyList"); list.innerHTML="";
-  const langLabel = isEnglish ? "🇺🇸 ENGLISH" : "🇯🇵 日本語";
-  replies.forEach((r,i) => {
-    const card = document.createElement("div"); card.className="reply-card";
-    const head = document.createElement("div"); head.className="reply-head";
-    head.innerHTML = '<div class="reply-lang">'+langLabel+' — '+String(i+1).padStart(2,"0")+'</div>';
-    const body = document.createElement("div"); body.className="reply-body"; body.textContent=r;
-    const actions = document.createElement("div"); actions.className="reply-actions";
-    const cpBtn = makeBtn("コピー","",()=>copyText(r,cpBtn,"コピー"));
-    const xBtn = makeBtn("Xで返信","open-x",()=>{
-      doCopy(r).then(()=>window.open("https://twitter.com/intent/tweet?text="+encodeURIComponent(r),"_blank"));
-    });
-    actions.appendChild(cpBtn); actions.appendChild(xBtn);
-    card.appendChild(head); card.appendChild(body); card.appendChild(actions);
-    list.appendChild(card);
-  });
-  list.scrollIntoView({behavior:"smooth",block:"start"});
-}
-
-function renderGenres() {
-  const g = document.getElementById("genres"); g.innerHTML = "";
-  GENRES.forEach(x => {
-    const b = document.createElement("button");
-    b.className = "chip" + (genres_selected.includes(x) ? " active" : "");
-    b.textContent = x;
-    b.onclick = () => {
-      if (genres_selected.includes(x)) {
-        genres_selected = genres_selected.filter(g => g !== x);
-      } else {
-        genres_selected.push(x);
-      }
-      renderGenres();
-    };
-    g.appendChild(b);
-  });
-}
-
-async function generateNeta() {
-  const btn = document.getElementById("netaBtn");
-  const err = document.getElementById("errorBox");
-  const note = document.getElementById("loadingNote");
-  const mood = document.getElementById("mood").value.trim();
-
-  btn.disabled = true; btn.textContent = "考え中…";
-  note.style.display = "block"; err.style.display = "none";
-  document.getElementById("netaList").innerHTML = "";
-  document.getElementById("postArea").style.display = "none";
-  selectedNeta = null; currentPost = null;
-
-  const usedList = usedPosts.length > 0 ? "\n- 以下は過去に出した内容なので絶対に使わない:\n" + usedPosts.map((p,i)=>`  ${i+1}. ${p}`).join("\n") : "";
-  const prompt = `あなたは50代の日本人です。Xにそのまま投稿できる自然なつぶやきを5本書いてください。
-
-条件:
-${genres_selected.length > 0 ? "- ジャンル: " + genres_selected.join("・").replace("ポケポケ","ポケモンカードゲームポケット（ポケポケ）") : "- 日常的な内容"}
-${mood ? "- 今日の気分・出来事: " + mood : ""}
-- 友人にLINEするような気軽なノリで書く。「〜なんですよね」「〜してたら」「〜じゃないですか」みたいな話し言葉
-- 1本目〜7本目は日常の一コマ（「今〜」「さっき〜」「最近〜」で始める）
-- 8本目・9本目・10本目は必ず「？」で終わる問いかけ。これは絶対条件、例外なし
-- 作り込まない。思ったことをそのまま書いた感じ
-- 50〜100字程度。短くていい
-- ハッシュタグなし
-- 「です・ます」調の丁寧語で統一する${usedList}
-
-10本をJSON形式のみで返答。前置き不要:
-{"netas": ["投稿文1", "投稿文2", "投稿文3", "投稿文4", "投稿文5", "投稿文6", "投稿文7", "投稿文8", "投稿文9", "投稿文10"]}`;
-
-  try {
-    const res = await fetch("/.netlify/functions/claude", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 800, messages: [{ role: "user", content: prompt }] }),
-
-    });
-    const data = await res.json();
-    if (!data || !data.content) throw new Error("API error: " + JSON.stringify(data).slice(0,100));
-    const text = data.content.filter(b => b && b.type==="text").map(b => b.text).join("\n");
-    const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
-    netas = parsed.netas || [];
-    usedPosts = [...usedPosts, ...netas];
-    try { localStorage.setItem("usedPosts", JSON.stringify(usedPosts)); } catch(e) {}
-    renderNetas();
-  } catch(e) {
-    err.textContent = "エラー: " + (e.message || String(e));
-    err.style.display = "block";
-  } finally {
-    btn.disabled = false; btn.textContent = "ネタ候補を出す";
-    note.style.display = "none";
-  }
-}
-
-function renderNetas() {
-  const list = document.getElementById("netaList"); list.innerHTML = "";
-  netas.forEach((n, i) => {
-    const card = document.createElement("div");
-    card.className = "neta-card";
-    card.innerHTML = `<div class="neta-head">
-      <div class="neta-num">${String(i+1).padStart(2,"0")}</div>
-      <div class="neta-text">${esc(n)}</div>
-      <div class="neta-arrow">→</div>
-    </div>`;
-    card.onclick = () => selectNeta(n, card);
-    list.appendChild(card);
-  });
-}
-
-async function selectNeta(neta, card) {
-  document.querySelectorAll(".neta-card").forEach(c => c.classList.remove("selected"));
-  card.classList.add("selected");
-  selectedNeta = neta;
-  await generatePost(neta);
-}
-
-async function regenPost() {
-  if (!selectedNeta) return;
-  await generatePost(selectedNeta);
-}
-
-async function generatePost(neta) {
-  const area = document.getElementById("postArea");
-  const box = document.getElementById("postBox");
-  const regenBtn = document.getElementById("regenBtn");
-  area.style.display = "block";
-  box.innerHTML = '<div style="padding:20px;text-align:center;color:#AAA;font-size:13px;">投稿文を生成中<span class="spinner">…</span></div>';
-  regenBtn.disabled = true;
-
-  const prompt = `あなたは50代の日本人です。Xに自然体でつぶやいています。
-以下のネタをもとに、実際にXに投稿できる文章を1本書いてください。
-
-ネタ: ${neta}
-
-条件:
-- 作り込んだフックや決まり文句は使わない
-- 素直な体験談・気づきとして書く（「〜だったんですよね」「正直〜だった」「気づいたら〜」など自然な言葉で）
-- 全体で100〜180字程度
-- 句読点をしっかり入れ、スマホで読みやすい改行を入れる
-- 最後に読者への自然な投げかけで締める（「あなたはどうですか？」など）
-- ハッシュタグなし
-
-1行目（書き出し）と本文を分けてJSON形式のみで返答。前置き不要:
-{"hook": "書き出しの一文", "body": "2行目以降の本文（改行は\\nで）"}`;
-
-  try {
-    const res = await fetch("/.netlify/functions/claude", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 600, messages: [{ role: "user", content: prompt }] })
-    });
-    const data = await res.json();
-    if (!data || !data.content) throw new Error("API error");
-    const text = data.content.filter(b => b && b.type==="text").map(b => b.text).join("\n");
-    const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
-    currentPost = parsed;
-    renderPost(parsed);
-  } catch(e) {
-    box.innerHTML = '<div style="padding:16px;color:#A93226;font-size:13px;">生成に失敗しました。もう一度お試しください。</div>';
-  } finally {
-    regenBtn.disabled = false;
-  }
-}
-
-function renderPost(p) {
-  const box = document.getElementById("postBox");
-  const full = p.hook + "\n\n" + p.body;
-
-  const hook = document.createElement("div"); hook.className = "post-hook"; hook.textContent = p.hook;
-  const body = document.createElement("div"); body.className = "post-body"; body.textContent = p.body;
-  const chars = document.createElement("div"); chars.className = "post-chars"; chars.textContent = full.length + "字";
-  const actions = document.createElement("div"); actions.className = "post-actions";
-
-  const cpBtn = makeBtn("全文コピー", "", () => copyText(full, cpBtn, "全文コピー"));
-  const xBtn = makeBtn("Xで投稿", "open-x", () => {
-    doCopy(full).then(() => window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(full.slice(0,280)), "_blank"));
-  });
-  const addBtn = makeBtn("＋スケジュール", "add-sched", () => addToSchedule(p, addBtn));
-  const resBtn = makeBtn("📅 投稿予約", "reserve-btn", () => reservePost(full, resBtn));
-  actions.appendChild(cpBtn); actions.appendChild(xBtn); actions.appendChild(addBtn); actions.appendChild(resBtn);
-
-  box.innerHTML = "";
-  const wrap = document.createElement("div"); wrap.style.cssText = "margin:10px 14px 0;border-left:3px solid #3A3A3A;padding-left:10px;border-radius:2px;";
-  wrap.appendChild(hook);
-  box.appendChild(wrap);
-  box.appendChild(body);
-  box.appendChild(chars);
-  box.appendChild(actions);
-  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-const GAS_URL = "https://script.google.com/macros/s/AKfycby6dfkdi2ykVU2u8aMTKmz2mmT-iO0G8KmuPNSZC29GmxXYm4TXRrR1anFcdoOb-Nc/exec";
-
-async function reservePost(text, btn) {
-  btn.disabled = true;
-  btn.textContent = "送信中…";
-  try {
-    await fetch(GAS_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text })
-    });
-    btn.textContent = "✓ 予約済";
-    btn.classList.add("reserved");
-  } catch(e) {
-    btn.textContent = "失敗";
-    btn.disabled = false;
-  }
-}
-
-function makeBtn(label, cls, onClick) {
-  const b = document.createElement("button");
-  b.textContent = label; if(cls) b.className = cls; b.onclick = onClick; return b;
-}
-
-function addToSchedule(post, btn) {
-  if (schedule.length >= 7) { alert("1週間分（7本）が上限です。"); return; }
-  schedule.push({ id: Date.now(), day: DAYS[schedule.length], time: BEST_TIMES[schedule.length], hook: post.hook, body: post.body });
-  saveSchedule();
-  btn.textContent = "✓ 追加済"; btn.disabled = true;
-  document.getElementById("schedCount").textContent = "("+schedule.length+")";
-}
-
-function saveSchedule() {
-  try { localStorage.setItem("xsched5", JSON.stringify(schedule)); } catch(e) {}
-}
-
-function renderSchedule() {
-  const box = document.getElementById("schedContent");
-  if (schedule.length === 0) {
-    box.innerHTML = '<div class="sched-empty">まだ投稿がありません。<br>「ネタ出し」タブで投稿を作り<br>「＋スケジュール」で追加してください。</div>';
-    return;
-  }
-  let html = '<div class="sched-stats">'
-    + statBox(schedule.length, "予定本数")
-    + statBox(7-schedule.length, "残り枠")
-    + '</div><div class="week-grid">';
-
-  schedule.forEach(s => {
-    html += `<div class="day-row">
-      <div class="day-head">
-        <div class="day-label">${s.day}</div>
-        <div class="day-time">⏰ ${s.time}</div>
-      </div>
-      <div class="day-post">
-        <div class="day-hook">${esc(s.hook)}</div>
-        <div class="day-body">${esc(s.body)}</div>
-      </div>
-      <div class="day-actions">
-        <button onclick="copySchedPost(${s.id}, this)">コピー</button>
-        <button onclick="openXSched(${s.id})">Xで投稿</button>
-        <button class="remove-btn" onclick="removeSched(${s.id})">削除</button>
-      </div>
-    </div>`;
-  });
-  html += '</div><button class="clear-btn" onclick="clearSched()">すべてクリア</button>';
-  box.innerHTML = html;
-}
-
-function statBox(num, label) {
-  return `<div class="stat-box"><div class="stat-num">${num}</div><div class="stat-label">${label}</div></div>`;
-}
-
-function copySchedPost(id, btn) {
-  const s = schedule.find(x => x.id===id); if(!s) return;
-  doCopy(s.hook+"\n\n"+s.body).then(() => { btn.textContent="コピー ✓"; btn.classList.add("copied"); setTimeout(()=>{btn.textContent="コピー";btn.classList.remove("copied");},1500); });
-}
-
-function openXSched(id) {
-  const s = schedule.find(x => x.id===id); if(!s) return;
-  doCopy(s.hook+"\n\n"+s.body).then(() => window.open("https://twitter.com/intent/tweet?text="+encodeURIComponent((s.hook+"\n\n"+s.body).slice(0,280)), "_blank"));
-}
-
-function removeSched(id) {
-  schedule = schedule.filter(x => x.id!==id);
-  schedule.forEach((s,i) => { s.day=DAYS[i]; s.time=BEST_TIMES[i]; });
-  saveSchedule();
-  document.getElementById("schedCount").textContent = schedule.length > 0 ? "("+schedule.length+")" : "";
-  renderSchedule();
-}
-
-function clearSched() {
-  if(!confirm("スケジュールをすべて削除しますか？")) return;
-  schedule = []; saveSchedule();
-  document.getElementById("schedCount").textContent = "";
-  renderSchedule();
-}
-
-function copyText(text, btn, orig) {
-  doCopy(text).then(() => { btn.textContent="コピーしました ✓"; btn.classList.add("copied"); setTimeout(()=>{btn.textContent=orig;btn.classList.remove("copied");},1500); });
-}
-
-function doCopy(text) {
-  if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).catch(()=>Promise.resolve(fallbackCopy(text)));
-  return Promise.resolve(fallbackCopy(text));
-}
-
-function fallbackCopy(text) {
-  const ta = document.createElement("textarea");
-  ta.value=text; ta.style.cssText="position:fixed;opacity:0";
-  document.body.appendChild(ta); ta.focus(); ta.select();
-  try{document.execCommand("copy");}catch(e){}
-  document.body.removeChild(ta);
-}
-
-function esc(s) { return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-
-renderGenres();
-document.getElementById("schedCount").textContent = schedule.length > 0 ? "("+schedule.length+")" : "";
-</script>
+<script src="assets/security.js"></script>
+<script src="assets/storage.js"></script>
+<script src="assets/similarity.js"></script>
+<script src="assets/neta-variety.js"></script>
+<script src="assets/post-scorer.js"></script>
+<script src="assets/api.js"></script>
+<script src="assets/analyzer.js"></script>
+<script src="assets/post-generator.js"></script>
+<script src="assets/app.js"></script>
 </body>
 </html>
